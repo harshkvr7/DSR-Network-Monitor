@@ -22,19 +22,27 @@ function SeverityBadge({ value }) {
 
 function ErrInfoCell({ text }) {
   const [expanded, setExpanded] = useState(false);
-  if (!text || text.length < 80) return <span className="font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{text || '—'}</span>;
+  if (!text) return <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>—</span>;
+  const isLong = text.length >= 80;
   return (
     <div>
-      <div className="font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>
-        {expanded ? text : `${text.slice(0, 80)}…`}
+      <div className="text-xs" style={{
+        color: 'var(--text-secondary)',
+        whiteSpace: expanded ? 'normal' : 'nowrap',
+        overflow: expanded ? 'visible' : 'hidden',
+        textOverflow: expanded ? 'unset' : 'ellipsis',
+      }}>
+        {expanded ? text : text.slice(0, 80) + (isLong ? '…' : '')}
       </div>
-      <button
-        onClick={() => setExpanded(e => !e)}
-        className="font-mono text-xs mt-0.5 flex items-center gap-0.5"
-        style={{ color: 'var(--accent-cyan-dim)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
-      >
-        {expanded ? <><ChevronUp size={10} /> collapse</> : <><ChevronDown size={10} /> expand</>}
-      </button>
+      {isLong && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
+          className="text-xs mt-0.5 flex items-center gap-0.5"
+          style={{ color: 'var(--accent)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+        >
+          {expanded ? <><ChevronUp size={10} /> collapse</> : <><ChevronDown size={10} /> expand</>}
+        </button>
+      )}
     </div>
   );
 }
@@ -59,11 +67,13 @@ export default function DataTable({ data }) {
     const q = search.toLowerCase().trim();
     if (!q) return data;
     return data.filter(row =>
-      (row.TIMESTAMP || '').toLowerCase().includes(q) ||
-      (row.SEVERITY  || '').toLowerCase().includes(q) ||
-      (row.SERVER    || '').toLowerCase().includes(q) ||
-      (row.NAME      || '').toLowerCase().includes(q) ||
-      (row.ERR_INFO  || '').toLowerCase().includes(q)
+      (row.TIMESTAMP    || '').toLowerCase().includes(q) ||
+      (row.SEVERITY     || '').toLowerCase().includes(q) ||
+      (row.SERVER       || '').toLowerCase().includes(q) ||
+      (row.EVENT_NUMBER || '').toLowerCase().includes(q) ||
+      (row.NAME         || '').toLowerCase().includes(q) ||
+      (row.INSTANCE     || '').toLowerCase().includes(q) ||
+      (row.ERR_INFO     || '').toLowerCase().includes(q)
     );
   }, [data, search]);
 
@@ -84,19 +94,25 @@ export default function DataTable({ data }) {
   const clearSearch = () => { setSearch(''); setPage(1); };
 
   const COLS = [
-    { key: 'TIMESTAMP', label: 'TIMESTAMP',  flex: '0 0 180px' },
-    { key: 'SEVERITY',  label: 'SEV',         flex: '0 0 90px' },
-    { key: 'SERVER',    label: 'SERVER',       flex: '0 0 200px' },
-    { key: 'NAME',      label: 'NAME',         flex: '0 0 160px' },
-    { key: 'ERR_INFO',  label: 'ERR_INFO',     flex: 1 },
+    { key: 'TIMESTAMP',    label: 'TIMESTAMP',    width: '180px' },
+    { key: 'SEVERITY',     label: 'SEV',           width: '90px'  },
+    { key: 'SERVER',       label: 'SERVER',        width: '180px' },
+    { key: 'EVENT_NUMBER', label: 'EVENT_NUMBER',  width: '120px' },
+    { key: 'NAME',         label: 'NAME',          width: '160px' },
+    { key: 'INSTANCE',     label: 'INSTANCE',      width: '200px' },
+    { key: 'ERR_INFO',     label: 'ERR_INFO',      width: '360px' },
   ];
+
+  const TABLE_MIN_WIDTH = '1290px';
 
   const SortIcon = ({ col }) => {
     if (sortCol !== col) return <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>⇅</span>;
     return sortDir === 'asc'
-      ? <ChevronUp size={11} style={{ color: 'var(--accent-cyan)' }} />
-      : <ChevronDown size={11} style={{ color: 'var(--accent-cyan)' }} />;
+      ? <ChevronUp size={11} style={{ color: 'var(--accent)' }} />
+      : <ChevronDown size={11} style={{ color: 'var(--accent)' }} />;
   };
+
+  const cellBase = { fontSize: '10px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 
   return (
     <div className="card flex flex-col animate-slide-in stagger-3" style={{ flex: 1, minHeight: 0 }}>
@@ -104,10 +120,9 @@ export default function DataTable({ data }) {
       <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <div className="font-mono text-xs tracking-widest" style={{ color: 'var(--text-dim)' }}>
           RAW EVENT LOG
-          <span className="ml-3" style={{ color: 'var(--accent-cyan)' }}>{sorted.length.toLocaleString()} rows</span>
+          <span className="ml-3" style={{ color: 'var(--accent)' }}>{sorted.length.toLocaleString()} rows</span>
         </div>
         <div className="flex items-center gap-3">
-          {/* Search */}
           <div className="relative flex items-center">
             <Search size={12} className="absolute left-2" style={{ color: 'var(--text-dim)' }} />
             <input
@@ -116,8 +131,8 @@ export default function DataTable({ data }) {
               placeholder="Search all columns…"
               className="font-mono text-xs pl-7 pr-7 py-1.5"
               style={{
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-bright)',
+                background: 'var(--bg-base)',
+                border: '1px solid var(--border)',
                 borderRadius: '1px',
                 color: 'var(--text-primary)',
                 outline: 'none',
@@ -130,15 +145,13 @@ export default function DataTable({ data }) {
               </button>
             )}
           </div>
-
-          {/* Page size */}
           <select
             value={pageSize}
             onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
             className="font-mono text-xs px-2 py-1.5"
             style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-bright)',
+              background: 'var(--bg-base)',
+              border: '1px solid var(--border)',
               color: 'var(--text-secondary)',
               borderRadius: '1px',
               outline: 'none',
@@ -151,11 +164,11 @@ export default function DataTable({ data }) {
 
       {/* Table */}
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: '900px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: TABLE_MIN_WIDTH }}>
           <colgroup>
-            {COLS.map(col => <col key={col.key} style={{ width: col.flex === 1 ? 'auto' : col.flex.split(' ')[2] }} />)}
+            {COLS.map(col => <col key={col.key} style={{ width: col.width }} />)}
           </colgroup>
-          <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-elevated)' }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-base)' }}>
             <tr>
               {COLS.map(col => (
                 <th
@@ -163,10 +176,10 @@ export default function DataTable({ data }) {
                   onClick={() => handleSort(col.key)}
                   className="text-left px-3 py-2 cursor-pointer select-none"
                   style={{
-                    borderBottom: '1px solid var(--border-bright)',
-                    fontFamily: "'JetBrains Mono', monospace",
+                    borderBottom: '1px solid var(--border)',
+                    background: 'var(--bg-base)',
                     fontSize: '10px',
-                    color: sortCol === col.key ? 'var(--accent-cyan)' : 'var(--text-dim)',
+                    color: sortCol === col.key ? 'var(--accent)' : 'var(--text-dim)',
                     letterSpacing: '0.08em',
                     whiteSpace: 'nowrap',
                   }}
@@ -181,32 +194,34 @@ export default function DataTable({ data }) {
           </thead>
           <tbody>
             {pageRows.map((row, i) => (
-              <tr
-                key={row.ID ?? i}
-                className="data-row"
-                style={{ borderBottom: '1px solid rgba(26,51,72,0.5)' }}
-              >
-                <td className="px-3 py-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <tr key={row.ID ?? i} className="data-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                <td className="px-3 py-2" style={{ ...cellBase, color: 'var(--text-dim)' }}>
                   {row.TIMESTAMP || '—'}
                 </td>
                 <td className="px-3 py-2">
                   <SeverityBadge value={row.SEVERITY} />
                 </td>
-                <td className="px-3 py-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.SERVER}>
+                <td className="px-3 py-2" style={cellBase} title={row.SERVER}>
                   {row.SERVER || '—'}
                 </td>
-                <td className="px-3 py-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.NAME}>
+                <td className="px-3 py-2" style={cellBase}>
+                  {row.EVENT_NUMBER || '—'}
+                </td>
+                <td className="px-3 py-2" style={cellBase} title={row.NAME}>
                   {row.NAME || '—'}
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2" style={cellBase} title={row.INSTANCE}>
+                  {row.INSTANCE || '—'}
+                </td>
+                <td className="px-3 py-2" style={{ ...cellBase, whiteSpace: 'normal', overflow: 'visible' }}>
                   <ErrInfoCell text={row.ERR_INFO} />
                 </td>
               </tr>
             ))}
             {!pageRows.length && (
               <tr>
-                <td colSpan={5} className="text-center py-16 font-mono text-xs" style={{ color: 'var(--text-dim)' }}>
-                  NO EVENTS MATCH THE CURRENT FILTERS
+                <td colSpan={7} className="text-center py-16 text-xs" style={{ color: 'var(--text-dim)' }}>
+                  No events match the current filters
                 </td>
               </tr>
             )}
@@ -216,26 +231,18 @@ export default function DataTable({ data }) {
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-2" style={{ borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-        <span className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>
+        <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
           Page {safeCurrentPage} of {totalPages}
           {' · '}
           rows {((safeCurrentPage - 1) * pageSize + 1).toLocaleString()}–{Math.min(safeCurrentPage * pageSize, sorted.length).toLocaleString()}
         </span>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => setPage(1)}
-            disabled={safeCurrentPage <= 1}
-            className="px-2 py-1 font-mono text-xs"
-            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage > 1 ? 'pointer' : 'not-allowed', opacity: safeCurrentPage > 1 ? 1 : 0.3 }}
-          >«</button>
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={safeCurrentPage <= 1}
-            className="px-2 py-1 font-mono text-xs"
-            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage > 1 ? 'pointer' : 'not-allowed', opacity: safeCurrentPage > 1 ? 1 : 0.3 }}
-          ><ChevronLeft size={12} /></button>
+          <button onClick={() => setPage(1)} disabled={safeCurrentPage <= 1} className="px-2 py-1 text-xs"
+            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage > 1 ? 'pointer' : 'not-allowed', opacity: safeCurrentPage > 1 ? 1 : 0.3 }}>«</button>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safeCurrentPage <= 1} className="px-2 py-1 text-xs"
+            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage > 1 ? 'pointer' : 'not-allowed', opacity: safeCurrentPage > 1 ? 1 : 0.3 }}>
+            <ChevronLeft size={12} /></button>
 
-          {/* Page number buttons */}
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
             let pageNum;
             if (totalPages <= 5) { pageNum = i + 1; }
@@ -243,34 +250,21 @@ export default function DataTable({ data }) {
             else if (safeCurrentPage >= totalPages - 2) { pageNum = totalPages - 4 + i; }
             else { pageNum = safeCurrentPage - 2 + i; }
             return (
-              <button
-                key={pageNum}
-                onClick={() => setPage(pageNum)}
-                className="px-2 py-1 font-mono text-xs"
+              <button key={pageNum} onClick={() => setPage(pageNum)} className="px-2 py-1 text-xs"
                 style={{
-                  border: `1px solid ${safeCurrentPage === pageNum ? 'var(--accent-cyan)' : 'var(--border)'}`,
-                  color: safeCurrentPage === pageNum ? 'var(--accent-cyan)' : 'var(--text-dim)',
-                  background: safeCurrentPage === pageNum ? 'rgba(0,212,255,0.08)' : 'none',
-                  borderRadius: '1px',
-                  cursor: 'pointer',
-                  minWidth: '28px',
-                }}
-              >{pageNum}</button>
+                  border: `1px solid ${safeCurrentPage === pageNum ? 'var(--accent)' : 'var(--border)'}`,
+                  color: safeCurrentPage === pageNum ? 'var(--accent)' : 'var(--text-dim)',
+                  background: safeCurrentPage === pageNum ? '#eff6ff' : 'none',
+                  borderRadius: '1px', cursor: 'pointer', minWidth: '28px',
+                }}>{pageNum}</button>
             );
           })}
 
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={safeCurrentPage >= totalPages}
-            className="px-2 py-1 font-mono text-xs"
-            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage < totalPages ? 'pointer' : 'not-allowed', opacity: safeCurrentPage < totalPages ? 1 : 0.3 }}
-          ><ChevronRight size={12} /></button>
-          <button
-            onClick={() => setPage(totalPages)}
-            disabled={safeCurrentPage >= totalPages}
-            className="px-2 py-1 font-mono text-xs"
-            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage < totalPages ? 'pointer' : 'not-allowed', opacity: safeCurrentPage < totalPages ? 1 : 0.3 }}
-          >»</button>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safeCurrentPage >= totalPages} className="px-2 py-1 text-xs"
+            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage < totalPages ? 'pointer' : 'not-allowed', opacity: safeCurrentPage < totalPages ? 1 : 0.3 }}>
+            <ChevronRight size={12} /></button>
+          <button onClick={() => setPage(totalPages)} disabled={safeCurrentPage >= totalPages} className="px-2 py-1 text-xs"
+            style={{ border: '1px solid var(--border)', color: 'var(--text-dim)', background: 'none', borderRadius: '1px', cursor: safeCurrentPage < totalPages ? 'pointer' : 'not-allowed', opacity: safeCurrentPage < totalPages ? 1 : 0.3 }}>»</button>
         </div>
       </div>
     </div>
