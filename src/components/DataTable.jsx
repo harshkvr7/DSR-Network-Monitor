@@ -55,13 +55,14 @@ export default function DataTable({ data }) {
   const [sortDir, setSortDir] = useState('desc');
 
   const handleSort = useCallback((col) => {
-    setSortCol(prev => {
-      if (prev === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-      else { setSortDir('asc'); }
-      return col;
-    });
-    setPage(1);
-  }, []);
+  if (col === sortCol) {
+    setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+  } else {
+    setSortCol(col);
+    setSortDir('asc');
+  }
+  setPage(1);
+}, [sortCol]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -112,7 +113,7 @@ export default function DataTable({ data }) {
       : <ChevronDown size={11} style={{ color: 'var(--accent)' }} />;
   };
 
-  const cellBase = { fontSize: '10px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+  const cellBase = { fontSize: '10px', color: 'var(--text-secondary)' };
 
   return (
     <div className="card flex flex-col animate-slide-in stagger-3" style={{ flex: 1, minHeight: 0 }}>
