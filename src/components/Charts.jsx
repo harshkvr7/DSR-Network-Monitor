@@ -5,9 +5,9 @@ import {
 } from 'recharts';
 
 const SEV_COLORS = {
-  CRITICAL: '#dc2626',
-  MAJOR:    '#ea580c',
-  MINOR:    '#ca8a04',
+  CRITICAL: '#eb1c1c',
+  MAJOR:    '#f2884f',
+  MINOR:    '#f2b738',
   WARNING:  '#7c3aed',
   CLEAR:    '#16a34a',
 };
