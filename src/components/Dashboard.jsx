@@ -6,18 +6,33 @@ import DataTable from './DataTable';
 import { Upload } from 'lucide-react';
 
 export default function Dashboard({ rawData, onReset }) {
-  const [filters, setFilters] = useState({ severity: 'ALL', server: 'ALL' });
+  // Added 'name' to the initial filters state
+  const [filters, setFilters] = useState({ severity: 'ALL', server: 'ALL', name: 'ALL' });
 
   const servers = useMemo(() => {
     const s = new Set(rawData.map(r => r.SERVER).filter(Boolean));
     return [...s].sort();
   }, [rawData]);
 
+  // Compute unique names and their frequencies
+  const namesWithFrequencies = useMemo(() => {
+    const counts = {};
+    rawData.forEach(r => {
+      if (r.NAME) {
+        counts[r.NAME] = (counts[r.NAME] || 0) + 1;
+      }
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, label: `${name} (${count})` }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [rawData]);
+
   const filteredData = useMemo(() => {
     return rawData.filter(row => {
       const sevOk = filters.severity === 'ALL' || row.SEVERITY === filters.severity;
       const srvOk = filters.server  === 'ALL' || row.SERVER   === filters.server;
-      return sevOk && srvOk;
+      const nameOk = filters.name === 'ALL' || row.NAME === filters.name; // Apply name filter
+      return sevOk && srvOk && nameOk;
     });
   }, [rawData, filters]);
 
@@ -25,6 +40,7 @@ export default function Dashboard({ rawData, onReset }) {
     <div className="flex h-full">
       <Sidebar
         servers={servers}
+        names={namesWithFrequencies} // Pass the names array down to the Sidebar
         filters={filters}
         setFilters={setFilters}
         totalRows={rawData.length}

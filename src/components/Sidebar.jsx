@@ -20,10 +20,12 @@ const SEV_DOT_BG = {
   ALL:      '#2563eb',
 };
 
-export default function Sidebar({ servers, filters, setFilters, totalRows, filteredRows }) {
+export default function Sidebar({ servers, names = [], filters, setFilters, totalRows, filteredRows }) {
   const handleSeverity = (sev) => setFilters(f => ({ ...f, severity: sev }));
   const handleServer   = (e)   => setFilters(f => ({ ...f, server: e.target.value }));
-  const reset = () => setFilters({ severity: 'ALL', server: 'ALL' });
+  const handleName     = (nameVal) => setFilters(f => ({ ...f, name: nameVal }));
+  
+  const reset = () => setFilters({ severity: 'ALL', server: 'ALL', name: 'ALL' });
 
   return (
     <aside className="flex flex-col h-full" style={{
@@ -32,16 +34,9 @@ export default function Sidebar({ servers, filters, setFilters, totalRows, filte
       background: 'var(--bg-surface)',
       borderRight: '1px solid var(--border)',
     }}>
-      {/* Logo */}
-      {/* <div className="px-4 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="flex items-center gap-2 mb-0.5">
-          <Radio size={13} style={{ color: 'var(--accent)' }} />
-          <span className="text-xs font-semibold tracking-wide" style={{ color: 'var(--text-primary)' }}>DSR Monitor</span>
-        </div>
-      </div> */}
 
       {/* Row count */}
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-base)' }}>
+      <div className="px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-base)' }}>
         <div className="text-xs mb-1" style={{ color: 'var(--text-dim)' }}>Events shown</div>
         <div className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
           {filteredRows.toLocaleString()}
@@ -52,7 +47,7 @@ export default function Sidebar({ servers, filters, setFilters, totalRows, filte
       </div>
 
       {/* Severity filter */}
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-1.5 mb-2">
           <Filter size={11} style={{ color: 'var(--text-dim)' }} />
           <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Severity</span>
@@ -82,7 +77,7 @@ export default function Sidebar({ servers, filters, setFilters, totalRows, filte
       </div>
 
       {/* Server filter */}
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+      <div className="px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-1.5 mb-2">
           <Filter size={11} style={{ color: 'var(--text-dim)' }} />
           <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Server</span>
@@ -108,8 +103,53 @@ export default function Sidebar({ servers, filters, setFilters, totalRows, filte
         </div>
       </div>
 
+      {/* Name filter - FLEXIBLE SCROLLABLE LIST */}
+      <div className="px-4 py-3 flex-1 min-h-0 flex flex-col" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-1.5 mb-2 shrink-0">
+          <Filter size={11} style={{ color: 'var(--text-dim)' }} />
+          <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Name</span>
+        </div>
+        {/* Changed this div to take up remaining space and scroll */}
+        <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto pr-1">
+          <button
+            onClick={() => handleName('ALL')}
+            className="flex items-center gap-2 px-2 py-1.5 text-left rounded transition-colors duration-100 shrink-0"
+            style={{
+              background: filters.name === 'ALL' || !filters.name ? '#eff6ff' : 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <span className="text-xs truncate w-full" style={{ color: filters.name === 'ALL' || !filters.name ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: filters.name === 'ALL' || !filters.name ? 600 : 400 }}>
+              All names
+            </span>
+          </button>
+
+          {names.map((n) => {
+            const active = filters.name === n.name;
+            return (
+              <button
+                key={n.name}
+                onClick={() => handleName(n.name)}
+                title={n.label}
+                className="flex items-center gap-2 px-2 py-1.5 text-left rounded transition-colors duration-100 shrink-0"
+                style={{
+                  background: active ? '#eff6ff' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <span className="text-xs truncate w-full" style={{ color: active ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: active ? 600 : 400 }}>
+                  {n.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Reset */}
-      <div className="px-4 py-3 mt-auto" style={{ borderTop: '1px solid var(--border)' }}>
+      <div className="px-4 py-3 shrink-0 mt-auto" style={{ borderTop: '1px solid var(--border)' }}>
         <button
           onClick={reset}
           className="w-full flex items-center justify-center gap-2 py-1.5 text-xs rounded transition-colors duration-100"
