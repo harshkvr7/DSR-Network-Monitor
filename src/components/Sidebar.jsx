@@ -1,4 +1,5 @@
-import { Filter, Radio, RotateCcw, ChevronDown } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Filter, RotateCcw, ChevronDown } from 'lucide-react';
 
 const SEVERITIES = ['ALL', 'CRITICAL', 'MAJOR', 'MINOR', 'WARNING', 'CLEAR'];
 
@@ -21,16 +22,66 @@ const SEV_DOT_BG = {
 };
 
 export default function Sidebar({ servers, names = [], filters, setFilters, totalRows, filteredRows }) {
+  // Sidebar resizing state
+  const [sidebarWidth, setSidebarWidth] = useState(200);
+  const [isResizing, setIsResizing] = useState(false);
+
   const handleSeverity = (sev) => setFilters(f => ({ ...f, severity: sev }));
   const handleServer   = (e)   => setFilters(f => ({ ...f, server: e.target.value }));
   const handleName     = (nameVal) => setFilters(f => ({ ...f, name: nameVal }));
   
   const reset = () => setFilters({ severity: 'ALL', server: 'ALL', name: 'ALL' });
 
+  // --- Resizing Logic ---
+  const startResizing = useCallback((e) => {
+    e.preventDefault(); // Prevent text selection while dragging
+    setIsResizing(true);
+  }, []);
+
+  const resize = useCallback((e) => {
+    if (isResizing) {
+      // Calculate new width based on mouse position
+      const newWidth = e.clientX;
+      
+      // Enforce min and max widths (e.g., min 200px, max 500px)
+      if (newWidth >= 200 && newWidth <= 500) {
+        setSidebarWidth(newWidth);
+      }
+    }
+  }, [isResizing]);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  // Attach and clean up event listeners on the window object
+  // so dragging continues even if the mouse leaves the handle area
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', resize);
+      window.addEventListener('mouseup', stopResizing);
+      // Disable body pointer events/text selection while dragging for smooth UX
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+    } else {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
+  // ----------------------
+
   return (
     <aside className="flex flex-col h-full" style={{
-      width: '200px',
-      minWidth: '200px',
+      position: 'relative', // Necessary for the absolute position of the drag handle
+      width: `${sidebarWidth}px`,
+      minWidth: `${sidebarWidth}px`,
       background: 'var(--bg-surface)',
       borderRight: '1px solid var(--border)',
     }}>
@@ -103,13 +154,12 @@ export default function Sidebar({ servers, names = [], filters, setFilters, tota
         </div>
       </div>
 
-      {/* Name filter - FLEXIBLE SCROLLABLE LIST */}
+      {/* Name filter */}
       <div className="px-4 py-3 flex-1 min-h-0 flex flex-col" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-1.5 mb-2 shrink-0">
           <Filter size={11} style={{ color: 'var(--text-dim)' }} />
           <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Name</span>
         </div>
-        {/* Changed this div to take up remaining space and scroll */}
         <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto pr-1">
           <button
             onClick={() => handleName('ALL')}
@@ -166,6 +216,28 @@ export default function Sidebar({ servers, names = [], filters, setFilters, tota
           Reset filters
         </button>
       </div>
+
+      {/* Resize Handle */}
+      <div
+        onMouseDown={startResizing}
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: -3,       // Hang over the edge slightly so it's easy to grab
+          width: '6px',
+          height: '100%',
+          cursor: 'col-resize',
+          zIndex: 50,
+          backgroundColor: isResizing ? 'var(--accent)' : 'transparent',
+          transition: 'background-color 0.2s',
+        }}
+        onMouseEnter={(e) => {
+          if (!isResizing) e.target.style.backgroundColor = 'var(--border)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isResizing) e.target.style.backgroundColor = 'transparent';
+        }}
+      />
     </aside>
   );
 }
