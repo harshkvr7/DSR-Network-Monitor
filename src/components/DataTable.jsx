@@ -54,34 +54,53 @@ export default function DataTable({ data }) {
   const [sortCol, setSortCol] = useState('TIMESTAMP');
   const [sortDir, setSortDir] = useState('desc');
 
+  // FIX 1: Generate a guaranteed unique, stable key for every row to prevent 
+  // React state mismatches (which breaks expand/collapse) when sorting/filtering.
+  const stableData = useMemo(() => {
+    data.forEach((row, idx) => {
+      if (!row._rowKey) {
+        // Define an invisible property so it doesn't mess with Object.keys later
+        Object.defineProperty(row, '_rowKey', {
+          value: `key-${idx}-${Math.random().toString(36).substring(2, 9)}`,
+          enumerable: false,
+          writable: false
+        });
+      }
+    });
+    return data;
+  }, [data]);
+
   const handleSort = useCallback((col) => {
-  if (col === sortCol) {
-    setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-  } else {
-    setSortCol(col);
-    setSortDir('asc');
-  }
-  setPage(1);
-}, [sortCol]);
+    if (col === sortCol) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }, [sortCol]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return data;
-    return data.filter(row =>
-      (row.TIMESTAMP    || '').toLowerCase().includes(q) ||
-      (row.SEVERITY     || '').toLowerCase().includes(q) ||
-      (row.SERVER       || '').toLowerCase().includes(q) ||
-      (row.EVENT_NUMBER || '').toLowerCase().includes(q) ||
-      (row.NAME         || '').toLowerCase().includes(q) ||
-      (row.INSTANCE     || '').toLowerCase().includes(q) ||
-      (row.ERR_INFO     || '').toLowerCase().includes(q)
+    if (!q) return stableData;
+    
+    // FIX 2: Wrapped in String() to prevent TypeError crashes if the parser returns a number
+    return stableData.filter(row =>
+      String(row.TIMESTAMP    || '').toLowerCase().includes(q) ||
+      String(row.SEVERITY     || '').toLowerCase().includes(q) ||
+      String(row.SERVER       || '').toLowerCase().includes(q) ||
+      String(row.EVENT_NUMBER || '').toLowerCase().includes(q) ||
+      String(row.NAME         || '').toLowerCase().includes(q) ||
+      String(row.INSTANCE     || '').toLowerCase().includes(q) ||
+      String(row.ERR_INFO     || '').toLowerCase().includes(q)
     );
-  }, [data, search]);
+  }, [stableData, search]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      const va = (a[sortCol] || '').toLowerCase();
-      const vb = (b[sortCol] || '').toLowerCase();
+      // FIX 3: Wrapped in String() to ensure .toLowerCase() never crashes the sort function
+      const va = String(a[sortCol] || '').toLowerCase();
+      const vb = String(b[sortCol] || '').toLowerCase();
       const cmp = va < vb ? -1 : va > vb ? 1 : 0;
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -194,8 +213,9 @@ export default function DataTable({ data }) {
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((row, i) => (
-              <tr key={row.ID ?? i} className="data-row" style={{ borderBottom: '1px solid var(--border)' }}>
+            {pageRows.map((row) => (
+              // FIX 4: Use the stable, guaranteed unique _rowKey instead of falling back to array index
+              <tr key={row._rowKey} className="data-row" style={{ borderBottom: '1px solid var(--border)' }}>
                 <td className="px-3 py-2" style={{ ...cellBase, color: 'var(--text-dim)' }}>
                   {row.TIMESTAMP || '—'}
                 </td>
